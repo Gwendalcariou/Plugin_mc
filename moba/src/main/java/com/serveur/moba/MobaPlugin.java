@@ -70,7 +70,7 @@ public final class MobaPlugin extends JavaPlugin {
                                 .registerEvents(new com.serveur.moba.classes.tank.TankPassiveListener(4000L, combat),
                                                 this);
                 abilities.register(PlayerStateService.Role.TANK, com.serveur.moba.ability.AbilityKey.W,
-                                new com.serveur.moba.classes.tank.TankWAbsorb(cooldowns, 4.0, 12000L));
+                                new com.serveur.moba.classes.tank.TankWAbsorb(cooldowns, 8.0, 12000L));
                 abilities.register(PlayerStateService.Role.TANK, com.serveur.moba.ability.AbilityKey.E,
                                 new com.serveur.moba.classes.tank.TankEDash(cooldowns, globalFlags, 4.0, 500L, 8000L));
                 abilities.register(PlayerStateService.Role.TANK, com.serveur.moba.ability.AbilityKey.R,
@@ -109,7 +109,7 @@ public final class MobaPlugin extends JavaPlugin {
                 abilities.register(PlayerStateService.Role.ADC, AbilityKey.E,
                                 new com.serveur.moba.classes.adc.AdcESlowZone(cooldowns, 2, 6.0, 6000L, 14000L));
                 abilities.register(PlayerStateService.Role.ADC, AbilityKey.R,
-                                new com.serveur.moba.classes.adc.AdcRAllSteroid(cooldowns, 25000L, 8000L, 3.0, 3.0));
+                                new com.serveur.moba.classes.adc.AdcRAllSteroid(cooldowns, 25000L, 8000L, 6.0, 3.0));
 
                 // === Fin Adc abilities ===
 

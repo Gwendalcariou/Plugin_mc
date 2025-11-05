@@ -23,7 +23,7 @@ public class TankWAbsorb implements Ability {
             p.sendMessage("§cW en CD (" + r + "s).");
             return false;
         }
-        Buffs.absorption(p, hearts);
+        Buffs.absorption(p, hearts, 20);
         p.sendMessage("§a[Tank] W — Absorption +" + hearts + "❤");
         return true;
     }

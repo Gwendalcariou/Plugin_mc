@@ -46,12 +46,12 @@ public class AdcRAllSteroid implements Ability {
         }
 
         // Absorption
-        Buffs.absorption(p, absorbHearts);
+        Buffs.absorption(p, absorbHearts, 20);
 
         // Strength I, Speed I, Fire Resistance
-        Buffs.give(p, PotionEffectType.STRENGTH, 1, (int) (durationMs / 1000));
-        Buffs.give(p, PotionEffectType.SPEED, 1, (int) (durationMs / 1000));
-        Buffs.give(p, PotionEffectType.FIRE_RESISTANCE, 1, (int) (durationMs / 1000));
+        Buffs.give(p, PotionEffectType.STRENGTH, 1, (int) (durationMs / 500));
+        Buffs.give(p, PotionEffectType.SPEED, 1, (int) (durationMs / 500));
+        Buffs.give(p, PotionEffectType.FIRE_RESISTANCE, 1, (int) (durationMs / 500));
 
         // Cleanup
         ctx.plugin().getServer().getScheduler().runTaskLater(ctx.plugin(), () -> {

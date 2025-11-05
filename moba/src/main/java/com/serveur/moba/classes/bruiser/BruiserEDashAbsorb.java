@@ -24,7 +24,7 @@ public class BruiserEDashAbsorb implements Ability {
             return false;
         }
         Dash.smallForward(p, distance);
-        Buffs.absorption(p, 4.0);
+        Buffs.absorption(p, 4.0, 10);
         p.sendMessage("§a[Bruiser] E — Dash + Absorption");
         return true;
     }
