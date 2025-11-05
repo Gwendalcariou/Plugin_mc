@@ -9,7 +9,7 @@ public class AbilityRegistry {
             PlayerStateService.Role.class);
 
     public void register(PlayerStateService.Role role, AbilityKey key, Ability ability) {
-        map.computeIfAbsent(role, _ -> new EnumMap<>(AbilityKey.class)).put(key, ability);
+        map.computeIfAbsent(role, r -> new EnumMap<>(AbilityKey.class)).put(key, ability);
     }
 
     public Ability get(PlayerStateService.Role role, AbilityKey key) {

@@ -59,7 +59,7 @@ public class PlayerStateService {
 
     /** Récupère ou crée l'état du joueur */
     public State get(UUID playerId) {
-        return states.computeIfAbsent(playerId, _ -> new State());
+        return states.computeIfAbsent(playerId, id -> new State());
     }
 
 }
