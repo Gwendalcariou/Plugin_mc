@@ -29,13 +29,13 @@ public class BruiserQTripleDash implements Ability {
 
         // Première activation — check CD
         if (!until.containsKey(id)) {
-            if (!cds.ready(p, "bruiser.Q", cdMs)) {
+            if (!cds.ready(p, CooldownIds.BRUISER_Q, cdMs)) {
                 p.sendMessage("§cQ en CD.");
                 return false;
             }
             used.put(id, 0);
             until.put(id, System.currentTimeMillis() + chargesWindowMs);
-            p.sendActionBar(net.kyori.adventure.text.Component.text("§e[Bruiser] Q — Dashs prêts (x3)"));
+            p.sendMessage("§e[Bruiser] Q — Dashs prêts (x3)");
         }
 
         // Fenêtre expirée ?
@@ -53,9 +53,7 @@ public class BruiserQTripleDash implements Ability {
         if (u >= 3) { // fin des charges
             until.remove(id);
             used.remove(id);
-            p.sendActionBar(net.kyori.adventure.text.Component.text("§a[Bruiser] Q — Charges consommées"));
-            // le CD est déjà “pris” au premier appui : on laisse le service gérer le temps
-            // restant
+            p.sendMessage("§a[Bruiser] Q — Charges consommées");
         }
         return true;
     }

@@ -24,7 +24,7 @@ public class AdcQAttackSpeed implements Ability {
     @Override
     public boolean cast(AbilityContext ctx) {
         Player p = ctx.player();
-        if (!cds.ready(p, "adc.Q", cdMs)) {
+        if (!cds.ready(p, CooldownIds.ADC_Q, cdMs)) {
             p.sendMessage("§cQ en CD.");
             return false;
         }

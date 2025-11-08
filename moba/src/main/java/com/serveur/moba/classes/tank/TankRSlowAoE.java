@@ -22,7 +22,7 @@ public class TankRSlowAoE implements Ability {
     @Override
     public boolean cast(AbilityContext ctx) {
         Player p = ctx.player();
-        if (!cds.ready(p, "tank.R", cdMs)) {
+        if (!cds.ready(p, CooldownIds.TANK_R, cdMs)) {
             p.sendMessage("§cR en CD.");
             return false;
         }

@@ -23,7 +23,7 @@ public class TankEDash implements Ability {
     @Override
     public boolean cast(AbilityContext ctx) {
         Player p = ctx.player();
-        if (!cds.ready(p, "tank.E", cdMs)) {
+        if (!cds.ready(p, CooldownIds.TANK_E, cdMs)) {
             p.sendMessage("§cE en CD.");
             return false;
         }

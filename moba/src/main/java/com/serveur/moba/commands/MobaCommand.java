@@ -8,6 +8,7 @@ import com.serveur.moba.game.enums.Team;
 
 import com.serveur.moba.game.GameManager;
 import com.serveur.moba.game.enums.Lane;
+import com.serveur.moba.classes.ClassService;
 
 import java.util.*;
 
@@ -22,14 +23,18 @@ public class MobaCommand implements CommandExecutor, TabCompleter {
     // pour /moba setzone (positions temporaires par joueur)
     private final Map<UUID, Location> pos1 = new HashMap<>();
     private final Map<UUID, Location> pos2 = new HashMap<>();
+    private final ClassService classService;
 
     public MobaCommand(JavaPlugin plugin, GameManager gm,
             com.serveur.moba.state.PlayerStateService playerState,
-            com.serveur.moba.ability.AbilityRegistry abilities) {
+            com.serveur.moba.ability.AbilityRegistry abilities,
+            ClassService classService) {
         this.plugin = plugin;
         this.gm = gm;
         this.playerState = playerState;
         this.abilities = abilities;
+        this.classService = classService;
+
     }
 
     // ---------- ROUTER PRINCIPAL ----------
@@ -184,14 +189,13 @@ public class MobaCommand implements CommandExecutor, TabCompleter {
             p.sendMessage("§eUsage: /class <tank|bruiser|adc>");
             return;
         }
-        String choice = args[0].toLowerCase(Locale.ROOT);
-
-        boolean ok = playerState.setClass(p.getUniqueId(), choice);
-        if (ok) {
-            p.sendMessage("§aClasse définie à " + choice);
-        } else {
+        var opt = classService.parseRole(args[0]);
+        if (opt.isEmpty()) {
             p.sendMessage("§cClasse inconnue (choix possibles: tank, bruiser, adc)");
+            return;
         }
+        classService.setClass(p, opt.get());
+        p.sendMessage("§aClasse définie à §b" + opt.get().name());
     }
 
     // ---------- /q /w /e /r ----------

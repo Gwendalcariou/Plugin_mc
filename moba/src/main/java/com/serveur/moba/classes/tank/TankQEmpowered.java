@@ -22,13 +22,13 @@ public class TankQEmpowered implements Ability {
     @Override
     public boolean cast(AbilityContext ctx) {
         Player p = ctx.player();
-        if (!cds.ready(p, "tank.Q", cdMs)) {
+        if (!cds.ready(p, CooldownIds.TANK_Q, cdMs)) {
             p.sendMessage("§cQ en CD.");
             return false;
         }
         stacks.put(p.getUniqueId(), 3);
         window.put(p.getUniqueId(), System.currentTimeMillis() + windowMs);
-        p.sendActionBar(net.kyori.adventure.text.Component.text("§6[Tank] Q — 3 coups renforcés prêts"));
+        p.sendMessage("§6[Tank] Q — 3 coups renforcés prêts");
         return true;
     }
 

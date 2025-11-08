@@ -42,7 +42,7 @@ public class BruiserRToggleSmash implements Ability {
         }
 
         // Activation du buff
-        if (!cds.ready(p, "bruiser.R", cdMs)) {
+        if (!cds.ready(p, CooldownIds.BRUISER_R, cdMs)) {
             p.sendMessage("§cR en CD.");
             return false;
         }

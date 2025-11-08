@@ -20,7 +20,7 @@ public class AdcWShield implements Ability {
     @Override
     public boolean cast(AbilityContext ctx) {
         Player p = ctx.player();
-        if (!cds.ready(p, "adc.W", cdMs)) {
+        if (!cds.ready(p, CooldownIds.ADC_W, cdMs)) {
             p.sendMessage("§cW en CD.");
             return false;
         }

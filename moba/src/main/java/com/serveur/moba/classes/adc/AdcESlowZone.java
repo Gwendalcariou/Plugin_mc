@@ -24,7 +24,7 @@ public class AdcESlowZone implements Ability {
     @Override
     public boolean cast(AbilityContext ctx) {
         Player p = ctx.player();
-        if (!cds.ready(p, "adc.E", cdMs)) {
+        if (!cds.ready(p, CooldownIds.ADC_E, cdMs)) {
             p.sendMessage("§cE en CD.");
             return false;
         }

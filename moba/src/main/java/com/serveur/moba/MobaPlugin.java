@@ -1,91 +1,117 @@
 package com.serveur.moba;
 
+import com.serveur.moba.ability.AbilityContext;
 import com.serveur.moba.ability.AbilityKey;
-import com.serveur.moba.commands.MobaCommand;
-import com.serveur.moba.lane.LaneManager;
+import com.serveur.moba.ability.AbilityRegistry;
+import com.serveur.moba.ability.CooldownIds;
+import com.serveur.moba.ability.CooldownService;
+import com.serveur.moba.classes.ClassService;
+import com.serveur.moba.classes.adc.AdcPassiveListener;
+import com.serveur.moba.classes.bruiser.BruiserPassiveListener;
+import com.serveur.moba.classes.tank.TankPassiveListener;
+import com.serveur.moba.combat.CombatTagService;
+import com.serveur.moba.game.GameManager;
 import com.serveur.moba.listeners.PvpGuardListener;
 import com.serveur.moba.state.PlayerStateService;
+import com.serveur.moba.state.PlayerStateService.Role;
+import com.serveur.moba.util.Flags;
+import com.serveur.moba.util.ProtectionListeners;
+
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerAnimationType;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import com.serveur.moba.ui.ActionBarBus;
+import com.serveur.moba.ui.CooldownHudService;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Point d'entrée du plugin :
  * - charge la config
  * - instancie les services
- * - enregistre le listener PvP intra-lane
- * - expose 2 commandes : /class et /forcepvp pour l'instant
+ * - enregistre les listeners globaux
+ * - expose les commandes /moba /forcepvp /class et les sorts (q/w/e/r)
  */
+public final class MobaPlugin extends JavaPlugin implements Listener {
 
-public final class MobaPlugin extends JavaPlugin {
+        // === Services & états centraux ===
+        private PlayerStateService state; // état pur (classe/level/gold…)
+        private GameManager gameManager;
+        private AbilityRegistry abilities;
+        private CooldownService cooldowns;
+        private CombatTagService combat;
+        private Flags globalFlags;
+        private ClassService classService;
+        private ActionBarBus actionBarBus;
 
-        private PlayerStateService playerState;
-        private com.serveur.moba.game.GameManager gameManager;
+        // Zones (wand)
+        private final Map<UUID, Location> pos1 = new HashMap<>();
+        private final Map<UUID, Location> pos2 = new HashMap<>();
 
-        private com.serveur.moba.ability.AbilityRegistry abilities;
-        private com.serveur.moba.ability.CooldownService cooldowns;
-        private com.serveur.moba.combat.CombatTagService combat;
-        private com.serveur.moba.util.Flags globalFlags;
-
-        private final java.util.Map<java.util.UUID, org.bukkit.Location> pos1 = new java.util.HashMap<>();
-        private final java.util.Map<java.util.UUID, org.bukkit.Location> pos2 = new java.util.HashMap<>();
-
-        public void setPos1(java.util.UUID id, org.bukkit.Location l) {
+        public void setPos1(UUID id, Location l) {
                 pos1.put(id, l);
         }
 
-        public void setPos2(java.util.UUID id, org.bukkit.Location l) {
+        public void setPos2(UUID id, Location l) {
                 pos2.put(id, l);
         }
 
-        public org.bukkit.Location getPos1(java.util.UUID id) {
+        public Location getPos1(UUID id) {
                 return pos1.get(id);
         }
 
-        public org.bukkit.Location getPos2(java.util.UUID id) {
+        public Location getPos2(UUID id) {
                 return pos2.get(id);
         }
 
         @Override
         public void onEnable() {
-
                 saveDefaultConfig();
 
-                // On instancie les services
-                this.playerState = new PlayerStateService(this);
-                this.gameManager = new com.serveur.moba.game.GameManager(this);
-                // champs
-                this.cooldowns = new com.serveur.moba.ability.CooldownService();
-                this.combat = new com.serveur.moba.combat.CombatTagService(3000L);
-                this.globalFlags = new com.serveur.moba.util.Flags();
-                this.abilities = new com.serveur.moba.ability.AbilityRegistry();
+                // === Instanciation des services (UNE SEULE FOIS) ===
+                this.state = new PlayerStateService(); // service "pur état"
+                this.combat = new CombatTagService(3000L); // tagging combat
+                this.cooldowns = new CooldownService();
+                this.globalFlags = new Flags();
+                this.abilities = new AbilityRegistry();
+                this.gameManager = new GameManager(this);
+                this.actionBarBus = new ActionBarBus();
 
-                // === Tank abilities ===
-                getServer().getPluginManager()
-                                .registerEvents(new com.serveur.moba.classes.tank.TankPassiveListener(4000L, combat),
-                                                this);
-                abilities.register(PlayerStateService.Role.TANK, com.serveur.moba.ability.AbilityKey.W,
-                                new com.serveur.moba.classes.tank.TankWAbsorb(cooldowns, 8.0, 12000L));
-                abilities.register(PlayerStateService.Role.TANK, com.serveur.moba.ability.AbilityKey.E,
-                                new com.serveur.moba.classes.tank.TankEDash(cooldowns, globalFlags, 4.0, 500L, 8000L));
-                abilities.register(PlayerStateService.Role.TANK, com.serveur.moba.ability.AbilityKey.R,
-                                new com.serveur.moba.classes.tank.TankRSlowAoE(cooldowns, 2, 3, 6.0, 20000L));
+                // === Listeners passifs globaux (role-guarded en interne) ===
+                var adcListener = new AdcPassiveListener(state);
+                var tankListener = new TankPassiveListener(6_000L, combat, this, state);
+                var bruiserListener = new BruiserPassiveListener(combat, state, actionBarBus);
+
+                var pm = getServer().getPluginManager();
+                pm.registerEvents(adcListener, this);
+                pm.registerEvents(tankListener, this);
+                pm.registerEvents(bruiserListener, this);
+
+                // === Service de changement de classe (disable old → enable new) ===
+                this.classService = new ClassService(state, adcListener);
+
+                // === Abilities (par rôle) ===
+                // Tank
                 var tankQ = new com.serveur.moba.classes.tank.TankQEmpowered(cooldowns, 10000L, 6000L);
                 abilities.register(PlayerStateService.Role.TANK, AbilityKey.Q, tankQ);
-                getServer().getPluginManager().registerEvents(new com.serveur.moba.classes.tank.TankQListener(tankQ),
-                                this);
+                abilities.register(PlayerStateService.Role.TANK, AbilityKey.W,
+                                new com.serveur.moba.classes.tank.TankWAbsorb(cooldowns, 8.0, 12000L));
+                abilities.register(PlayerStateService.Role.TANK, AbilityKey.E,
+                                new com.serveur.moba.classes.tank.TankEDash(cooldowns, globalFlags, 4.0, 500L, 8000L));
+                abilities.register(PlayerStateService.Role.TANK, AbilityKey.R,
+                                new com.serveur.moba.classes.tank.TankRSlowAoE(cooldowns, 2, 3, 6.0, 20000L));
+                pm.registerEvents(new com.serveur.moba.classes.tank.TankQListener(tankQ), this);
 
-                // === Fin Tank abilities ===
-
-                // === Bruiser abilities ===
-                getServer().getPluginManager()
-                                .registerEvents(new com.serveur.moba.classes.bruiser.BruiserPassiveListener(combat),
-                                                this);
+                // Bruiser
                 abilities.register(PlayerStateService.Role.BRUISER, AbilityKey.Q,
                                 new com.serveur.moba.classes.bruiser.BruiserQTripleDash(cooldowns, 3.0, 6000L, 9000L));
                 abilities.register(PlayerStateService.Role.BRUISER, AbilityKey.W,
@@ -96,12 +122,7 @@ public final class MobaPlugin extends JavaPlugin {
                                 new com.serveur.moba.classes.bruiser.BruiserRToggleSmash(cooldowns, 8000L, 25000L, 6.0,
                                                 70.0));
 
-                // === Fin Bruiser abilities ===
-
-                // === Adc abilities ===
-                getServer().getPluginManager().registerEvents(
-                                new com.serveur.moba.classes.adc.AdcPassiveListener(playerState),
-                                this);
+                // ADC
                 abilities.register(PlayerStateService.Role.ADC, AbilityKey.Q,
                                 new com.serveur.moba.classes.adc.AdcQAttackSpeed(cooldowns, 9000L, 6000L, 2.0));
                 abilities.register(PlayerStateService.Role.ADC, AbilityKey.W,
@@ -111,48 +132,80 @@ public final class MobaPlugin extends JavaPlugin {
                 abilities.register(PlayerStateService.Role.ADC, AbilityKey.R,
                                 new com.serveur.moba.classes.adc.AdcRAllSteroid(cooldowns, 25000L, 8000L, 6.0, 3.0));
 
-                // === Fin Adc abilities ===
+                var hud = new CooldownHudService(this, state, cooldowns, actionBarBus);
+
+                // === Tank ===
+                hud.map(Role.TANK, AbilityKey.Q, CooldownIds.TANK_Q, 10_000L);
+                hud.map(Role.TANK, AbilityKey.W, CooldownIds.TANK_W, 12_000L);
+                hud.map(Role.TANK, AbilityKey.E, CooldownIds.TANK_E, 8_000L);
+                hud.map(Role.TANK, AbilityKey.R, CooldownIds.TANK_R, 20_000L);
+
+                hud.map(Role.BRUISER, AbilityKey.Q, CooldownIds.BRUISER_Q, 9_000L);
+                hud.map(Role.BRUISER, AbilityKey.W, CooldownIds.BRUISER_W, 10_000L);
+                hud.map(Role.BRUISER, AbilityKey.E, CooldownIds.BRUISER_E, 8_000L);
+                hud.map(Role.BRUISER, AbilityKey.R, CooldownIds.BRUISER_R, 25_000L);
+
+                hud.map(Role.ADC, AbilityKey.Q, CooldownIds.ADC_Q, 6_000L);
+                hud.map(Role.ADC, AbilityKey.W, CooldownIds.ADC_W, 12_000L);
+                hud.map(Role.ADC, AbilityKey.E, CooldownIds.ADC_E, 14_000L);
+                hud.map(Role.ADC, AbilityKey.R, CooldownIds.ADC_R, 25_000L);
+
+                // Démarrer l’affichage périodique
+                hud.start();
 
                 getLogger().info("Abilities init OK.");
 
-                // On enregistre le listener d'annulation des dégâts
-                Bukkit.getPluginManager().registerEvents(
-                                new com.serveur.moba.listeners.PvpGuardListener(gameManager.lane()), this);
-                getServer().getPluginManager()
-                                .registerEvents(new com.serveur.moba.util.ProtectionListeners(globalFlags), this);
-                getServer().getPluginManager().registerEvents(new com.serveur.moba.listeners.WandListener(this), this);
+                // === Listeners “système” ===
+                pm.registerEvents(new PvpGuardListener(gameManager.lane()), this);
+                pm.registerEvents(new ProtectionListeners(globalFlags), this);
+                pm.registerEvents(new com.serveur.moba.listeners.WandListener(this), this);
 
-                MobaCommand mobaCmd = new MobaCommand(this, gameManager, playerState, abilities);
+                // Hooks de nettoyage (désactiver passifs + nettoyer état)
+                pm.registerEvents(new Listener() {
+                        @org.bukkit.event.EventHandler
+                        public void onQuit(PlayerQuitEvent e) {
+                                classService.disableCurrent(e.getPlayer());
+                                state.clear(e.getPlayer());
+                        }
 
+                        @org.bukkit.event.EventHandler
+                        public void onDeath(PlayerDeathEvent e) {
+                                classService.disableCurrent(e.getEntity());
+                        }
+                }, this);
+
+                // === Commandes ===
+                var mobaCmd = new com.serveur.moba.commands.MobaCommand(
+                                this, gameManager, state, abilities, classService);
                 getCommand("moba").setExecutor(mobaCmd);
                 getCommand("moba").setTabCompleter(mobaCmd);
-
                 getCommand("forcepvp").setExecutor(mobaCmd);
                 getCommand("forcepvp").setTabCompleter(mobaCmd);
-
                 getCommand("class").setExecutor(mobaCmd);
-                getCommand("class").setTabCompleter(mobaCmd);
 
-                getCommand("q").setExecutor(mobaCmd);
-                getCommand("w").setExecutor(mobaCmd);
-                getCommand("e").setExecutor(mobaCmd);
-                getCommand("r").setExecutor(mobaCmd);
+                getCommand("q").setExecutor(this);
+                getCommand("w").setExecutor(this);
+                getCommand("e").setExecutor(this);
+                getCommand("r").setExecutor(this);
 
-                // Programme les fenêtres PvP depuis la config
+                // === Lancement de la boucle de jeu ===
                 gameManager.start();
                 getLogger().info("Moba enabled!");
-
         }
 
         @Override
         public void onDisable() {
+                // Désactiver proprement les passifs encore actifs
+                for (Player p : getServer().getOnlinePlayers()) {
+                        classService.disableCurrent(p);
+                }
                 getLogger().info("Moba disabled!");
         }
 
         @Override
-        public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
-                        @NotNull String[] args) {
-                // commande /class <tank|bruiser|adc>
+        public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
+                        @NotNull String label, @NotNull String[] args) {
+
                 if (command.getName().equalsIgnoreCase("class")) {
                         if (!(sender instanceof Player p)) {
                                 sender.sendMessage("§cSeulement les joueurs in-game peuvent exécuter cette commande");
@@ -162,28 +215,17 @@ public final class MobaPlugin extends JavaPlugin {
                                 p.sendMessage("§cUsage: /class <tank|bruiser|adc>");
                                 return true;
                         }
-                        boolean ok = playerState.setClass(p.getUniqueId(), args[0]);
-                        p.sendMessage(ok ? "§aClasse définie à " + args[0]
-                                        : "§cClasse inconnue (choix possibles: tank, bruiser, adc)");
+                        var opt = classService.parseRole(args[0]);
+                        if (opt.isEmpty()) {
+                                p.sendMessage("§cClasse inconnue (choix: tank, bruiser, adc)");
+                                return true;
+                        }
+                        classService.setClass(p, opt.get());
+                        p.sendMessage("§aClasse définie à §b" + opt.get().name());
                         return true;
                 }
 
-                // commande /forcepvp <lane> <on|off>
-                if (command.getName().equalsIgnoreCase("forcepvp")) {
-                        if (!sender.hasPermission("moba.admin")) {
-                                sender.sendMessage("§cPermission manquante: moba.admin");
-                                return true;
-                        }
-                        if (args.length != 2) {
-                                sender.sendMessage("§cUsage: /forcepvp <lane> <on|off>");
-                                return true;
-                        }
-                        boolean on = args[1].equalsIgnoreCase("on");
-                        boolean ok = gameManager.forcePvp(args[0], on);
-                        sender.sendMessage(
-                                        ok ? "§aPvP " + (on ? "ON" : "OFF") + " pour " + args[0] : "§cLane inconnue.");
-                        return true;
-                }
+                // Sorts (Q/W/E/R) déclenchés ici
                 if (command.getName().equalsIgnoreCase("q")
                                 || command.getName().equalsIgnoreCase("w")
                                 || command.getName().equalsIgnoreCase("e")
@@ -192,104 +234,21 @@ public final class MobaPlugin extends JavaPlugin {
                                 sender.sendMessage("Joueur requis.");
                                 return true;
                         }
-                        var s = playerState.get(p.getUniqueId());
-                        com.serveur.moba.ability.AbilityKey key = switch (command.getName().toLowerCase()) {
-                                case "q" -> com.serveur.moba.ability.AbilityKey.Q;
-                                case "w" -> com.serveur.moba.ability.AbilityKey.W;
-                                case "e" -> com.serveur.moba.ability.AbilityKey.E;
-                                default -> com.serveur.moba.ability.AbilityKey.R;
+                        var s = state.get(p.getUniqueId());
+                        AbilityKey key = switch (command.getName().toLowerCase()) {
+                                case "q" -> AbilityKey.Q;
+                                case "w" -> AbilityKey.W;
+                                case "e" -> AbilityKey.E;
+                                default -> AbilityKey.R;
                         };
                         var ab = abilities.get(s.role, key);
                         if (ab == null) {
                                 p.sendMessage("§cAucune compétence assignée.");
                                 return true;
                         }
-                        boolean ok = ab.cast(new com.serveur.moba.ability.AbilityContext(this, p));
+                        boolean ok = ab.cast(new AbilityContext(this, p));
                         if (!ok)
                                 p.sendMessage("§cImpossible de lancer le sort.");
-                        return true;
-                }
-
-                if (command.getName().equalsIgnoreCase("moba")) {
-                        if (!sender.hasPermission("moba.admin")) {
-                                sender.sendMessage("§cPermission manquante: moba.admin");
-                                return true;
-                        }
-                        if (!(sender instanceof Player p)) {
-                                sender.sendMessage("§cCommande en jeu uniquement.");
-                                return true;
-                        }
-                        if (args.length == 0) {
-                                sender.sendMessage("§eUsage: /moba <start|stop|setzone|setnexus|reload>");
-                                return true;
-                        }
-
-                        switch (args[0].toLowerCase()) {
-                                case "start" -> {
-                                        gameManager.start();
-                                        sender.sendMessage("§aPartie lancée.");
-                                }
-                                case "stop" -> {
-                                        gameManager.stop(); // ajoute cette méthode si elle n'existe pas
-                                        sender.sendMessage("§cPartie arrêtée.");
-                                }
-                                case "reload" -> {
-                                        this.reloadConfig();
-                                        gameManager.reloadFromConfig(getConfig()); // ajoute cette méthode côté
-                                                                                   // LaneManager
-                                        sender.sendMessage("§aConfig rechargée.");
-                                }
-                                case "setnexus" -> {
-                                        if (args.length < 2) {
-                                                sender.sendMessage("§e/moba setnexus <blue|red>");
-                                                return true;
-                                        }
-                                        var teamArg = args[1].toLowerCase();
-                                        var l = p.getLocation().clone();
-                                        // Écrit dans la config (simple et persistant)
-                                        String base = "nexus." + (teamArg.equals("blue") ? "blue" : "red");
-                                        getConfig().set(base + ".world", l.getWorld().getName());
-                                        getConfig().set(base + ".x", l.getBlockX());
-                                        getConfig().set(base + ".y", l.getBlockY());
-                                        getConfig().set(base + ".z", l.getBlockZ());
-                                        if (!getConfig().isSet(base + ".hp"))
-                                                getConfig().set(base + ".hp", 5000);
-                                        saveConfig();
-                                        sender.sendMessage("§aNexus " + teamArg + " positionné en " +
-                                                        l.getWorld().getName() + " " + l.getBlockX() + " "
-                                                        + l.getBlockY() + " " + l.getBlockZ());
-                                }
-                                case "setzone" -> {
-                                        if (args.length < 2) {
-                                                sender.sendMessage(
-                                                                "§e/moba setzone <name>  (clic gauche=pos1, clic droit=pos2)");
-                                                return true;
-                                        }
-                                        String name = args[1];
-                                        var a = getPos1(p.getUniqueId());
-                                        var b = getPos2(p.getUniqueId());
-                                        if (a == null || b == null) {
-                                                sender.sendMessage(
-                                                                "§eDéfinis d'abord pos1 et pos2 (clic gauche/droit sur un bloc).");
-                                                return true;
-                                        }
-                                        String base = "zones." + name;
-                                        getConfig().set(base + ".world", a.getWorld().getName());
-                                        getConfig().set(base + ".x1", a.getBlockX());
-                                        getConfig().set(base + ".y1", a.getBlockY());
-                                        getConfig().set(base + ".z1", a.getBlockZ());
-                                        getConfig().set(base + ".x2", b.getBlockX());
-                                        getConfig().set(base + ".y2", b.getBlockY());
-                                        getConfig().set(base + ".z2", b.getBlockZ());
-                                        saveConfig();
-
-                                        // Si ton LaneManager sait consommer les zones à chaud, recharge-le :
-                                        gameManager.reloadFromConfig(getConfig());
-
-                                        sender.sendMessage("§aZone '" + name + "' enregistrée.");
-                                }
-                                default -> sender.sendMessage("§eSous-commande inconnue.");
-                        }
                         return true;
                 }
 

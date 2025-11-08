@@ -23,7 +23,7 @@ public class BruiserWSlowAoE implements Ability {
     @Override
     public boolean cast(AbilityContext ctx) {
         Player p = ctx.player();
-        if (!cds.ready(p, "bruiser.W", cdMs)) {
+        if (!cds.ready(p, CooldownIds.BRUISER_W, cdMs)) {
             p.sendMessage("§cW en CD.");
             return false;
         }

@@ -29,7 +29,7 @@ public class AdcRAllSteroid implements Ability {
     @Override
     public boolean cast(AbilityContext ctx) {
         Player p = ctx.player();
-        if (!cds.ready(p, "adc.R", cdMs)) {
+        if (!cds.ready(p, CooldownIds.ADC_R, cdMs)) {
             p.sendMessage("§cR en CD.");
             return false;
         }

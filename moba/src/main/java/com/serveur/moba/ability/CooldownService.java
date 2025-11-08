@@ -30,4 +30,9 @@ public class CooldownService {
         long d = ms - (System.currentTimeMillis() - last);
         return Math.max(0, d);
     }
+
+    public boolean isReady(Player p, String name, long ms) {
+        return remaining(p, name, ms) <= 0;
+    }
+
 }

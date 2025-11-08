@@ -19,7 +19,7 @@ public class BruiserEDashAbsorb implements Ability {
     @Override
     public boolean cast(AbilityContext ctx) {
         Player p = ctx.player();
-        if (!cds.ready(p, "bruiser.E", cdMs)) {
+        if (!cds.ready(p, CooldownIds.BRUISER_E, cdMs)) {
             p.sendMessage("§cE en CD.");
             return false;
         }

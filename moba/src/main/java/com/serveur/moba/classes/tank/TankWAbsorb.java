@@ -18,8 +18,8 @@ public class TankWAbsorb implements Ability {
     @Override
     public boolean cast(AbilityContext ctx) {
         Player p = ctx.player();
-        if (!cds.ready(p, "tank.W", cdMs)) {
-            long r = cds.remaining(p, "tank.W", cdMs) / 1000;
+        if (!cds.ready(p, CooldownIds.TANK_W, cdMs)) {
+            long r = cds.remaining(p, CooldownIds.TANK_W, cdMs) / 1000;
             p.sendMessage("§cW en CD (" + r + "s).");
             return false;
         }

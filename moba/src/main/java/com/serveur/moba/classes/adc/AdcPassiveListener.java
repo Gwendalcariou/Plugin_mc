@@ -12,6 +12,11 @@ public class AdcPassiveListener implements Listener {
 
     public AdcPassiveListener(PlayerStateService state) {
         this.state = state;
+
+    }
+
+    public void reset(UUID id) {
+        aaCount.remove(id);
     }
 
     @EventHandler
@@ -26,7 +31,7 @@ public class AdcPassiveListener implements Listener {
         if (n >= 5) {
             e.setDamage(e.getDamage() * 3.0);
             aaCount.put(p.getUniqueId(), 0);
-            p.sendActionBar(net.kyori.adventure.text.Component.text("§6[ADC] Tir renforcé !"));
+            p.sendMessage("§6[ADC] Tir renforcé !");
         }
     }
 }
