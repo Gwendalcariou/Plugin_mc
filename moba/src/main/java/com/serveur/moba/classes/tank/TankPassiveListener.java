@@ -29,26 +29,37 @@ public class TankPassiveListener implements Listener {
 
     @EventHandler
     public void onHit(EntityDamageByEntityEvent e) {
-
-        if (!(e.getEntity() instanceof Player victim) || !(e.getDamager() instanceof Player attacker))
+        if (!(e.getEntity() instanceof Player victim))
+            return;
+        if (!(e.getDamager() instanceof Player attacker))
             return;
 
-        var s = state.get(victim.getUniqueId());
-        if (s.role != PlayerStateService.Role.TANK)
+        // Récupération des rôles
+        var victimRole = state.get(victim.getUniqueId()).role;
+
+        if (victimRole != PlayerStateService.Role.TANK)
             return;
 
+        // Gestion combat tag
         combat.tag(victim);
         combat.tag(attacker);
 
+        // Cooldown : un tank ne peut pas déclencher le passif en boucle
         if (flags.has(victim, FLAG))
             return;
 
+        // On applique la cécité à l'attaquant
         Buffs.give(attacker, org.bukkit.potion.PotionEffectType.BLINDNESS, 3, 3);
-        flags.set(victim, FLAG, true);
-        victim.sendMessage("§a[Tank] Passive — Blindness appliqué à " + attacker);
 
+        // Feedbacks visuels / textuels
+        victim.sendMessage("§a[Tank] Passive — Blindness appliqué à " + attacker.getName());
+        victim.sendMessage("§cBlind ! by §a[Tank] " + victim.getName());
+
+        // Mise en cooldown du passif
+        flags.set(victim, FLAG, true);
         plugin.getServer().getScheduler().runTaskLater(plugin,
                 () -> flags.set(victim, FLAG, false),
                 internalCdMs / 50L);
     }
+
 }

@@ -1,6 +1,7 @@
 package com.serveur.moba.classes;
 
 import com.serveur.moba.classes.adc.AdcPassiveListener;
+import com.serveur.moba.kit.KitService;
 import com.serveur.moba.state.PlayerStateService;
 import java.util.Optional;
 import java.util.Locale;
@@ -10,10 +11,12 @@ import org.bukkit.entity.Player;
 public final class ClassService {
     private final PlayerStateService state;
     private final AdcPassiveListener adcListener; // pour reset compteur
+    private final KitService kitService;
 
-    public ClassService(PlayerStateService state, AdcPassiveListener adcListener) {
+    public ClassService(PlayerStateService state, AdcPassiveListener adcListener, KitService kitService) {
         this.state = state;
         this.adcListener = adcListener;
+        this.kitService = kitService;
     }
 
     public Optional<PlayerStateService.Role> parseRole(String raw) {
@@ -36,7 +39,7 @@ public final class ClassService {
             case BRUISER -> p.removePotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
             case ADC -> adcListener.reset(p.getUniqueId());
             case TANK -> {
-                /* pas d'effet persistant à enlever ici */ }
+            }
         }
 
         // set l'état
@@ -44,13 +47,12 @@ public final class ClassService {
 
         // --- INIT de la nouvelle classe (si tu veux appliquer quelque chose
         // immédiatement) ---
-        if (newRole == PlayerStateService.Role.BRUISER) {
-            // optionnel: rien, le listener se chargera d’appliquer le SPEED sur move hors
-            // combat
-        }
+        kitService.applyKit(p, newRole);
+
         if (newRole == PlayerStateService.Role.ADC) {
             adcListener.reset(p.getUniqueId()); // démarre propre
         }
+
         return true;
     }
 

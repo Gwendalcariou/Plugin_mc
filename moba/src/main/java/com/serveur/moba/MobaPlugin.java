@@ -11,20 +11,28 @@ import com.serveur.moba.classes.bruiser.BruiserPassiveListener;
 import com.serveur.moba.classes.tank.TankPassiveListener;
 import com.serveur.moba.combat.CombatTagService;
 import com.serveur.moba.game.GameManager;
+import com.serveur.moba.kit.KitService;
+import com.serveur.moba.kit.SpellHotbar;
+import com.serveur.moba.kit.SpellHotbar.SpellTag;
+import com.serveur.moba.listeners.HotbarSpellListener;
 import com.serveur.moba.listeners.PvpGuardListener;
 import com.serveur.moba.state.PlayerStateService;
 import com.serveur.moba.state.PlayerStateService.Role;
+import com.serveur.moba.util.CooldownBase;
 import com.serveur.moba.util.Flags;
 import com.serveur.moba.util.ProtectionListeners;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import com.serveur.moba.ui.ActionBarBus;
@@ -52,6 +60,9 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
         private Flags globalFlags;
         private ClassService classService;
         private ActionBarBus actionBarBus;
+        private KitService kitService;
+        private NamespacedKey spellKey;
+        private CooldownBase cooldownBase;
 
         // Zones (wand)
         private final Map<UUID, Location> pos1 = new HashMap<>();
@@ -85,6 +96,8 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                 this.abilities = new AbilityRegistry();
                 this.gameManager = new GameManager(this);
                 this.actionBarBus = new ActionBarBus();
+                this.kitService = new KitService(this);
+                this.spellKey = new NamespacedKey(this, "spell_key");
 
                 // === Listeners passifs globaux (role-guarded en interne) ===
                 var adcListener = new AdcPassiveListener(state);
@@ -97,7 +110,7 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                 pm.registerEvents(bruiserListener, this);
 
                 // === Service de changement de classe (disable old → enable new) ===
-                this.classService = new ClassService(state, adcListener);
+                this.classService = new ClassService(state, adcListener, kitService);
 
                 // === Abilities (par rôle) ===
                 // Tank
@@ -133,25 +146,44 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                                 new com.serveur.moba.classes.adc.AdcRAllSteroid(cooldowns, 25000L, 8000L, 6.0, 3.0));
 
                 var hud = new CooldownHudService(this, state, cooldowns, actionBarBus);
-
+                var cdBase = new CooldownBase();
                 // === Tank ===
                 hud.map(Role.TANK, AbilityKey.Q, CooldownIds.TANK_Q, 10_000L);
+                cdBase.set(Role.TANK, AbilityKey.Q, 10_000L);
                 hud.map(Role.TANK, AbilityKey.W, CooldownIds.TANK_W, 12_000L);
+                cdBase.set(Role.TANK, AbilityKey.W, 12_000L);
                 hud.map(Role.TANK, AbilityKey.E, CooldownIds.TANK_E, 8_000L);
+                cdBase.set(Role.TANK, AbilityKey.E, 8_000L);
                 hud.map(Role.TANK, AbilityKey.R, CooldownIds.TANK_R, 20_000L);
+                cdBase.set(Role.TANK, AbilityKey.R, 20_000L);
 
+                // === Bruiser ===
                 hud.map(Role.BRUISER, AbilityKey.Q, CooldownIds.BRUISER_Q, 9_000L);
+                cdBase.set(Role.BRUISER, AbilityKey.Q, 9_000L);
                 hud.map(Role.BRUISER, AbilityKey.W, CooldownIds.BRUISER_W, 10_000L);
+                cdBase.set(Role.BRUISER, AbilityKey.W, 10_000L);
                 hud.map(Role.BRUISER, AbilityKey.E, CooldownIds.BRUISER_E, 8_000L);
+                cdBase.set(Role.BRUISER, AbilityKey.E, 8_000L);
                 hud.map(Role.BRUISER, AbilityKey.R, CooldownIds.BRUISER_R, 25_000L);
+                cdBase.set(Role.BRUISER, AbilityKey.R, 25_000L);
 
+                // === ADC ===
                 hud.map(Role.ADC, AbilityKey.Q, CooldownIds.ADC_Q, 6_000L);
+                cdBase.set(Role.ADC, AbilityKey.Q, 6_000L);
                 hud.map(Role.ADC, AbilityKey.W, CooldownIds.ADC_W, 12_000L);
+                cdBase.set(Role.ADC, AbilityKey.W, 12_000L);
                 hud.map(Role.ADC, AbilityKey.E, CooldownIds.ADC_E, 14_000L);
+                cdBase.set(Role.ADC, AbilityKey.E, 14_000L);
                 hud.map(Role.ADC, AbilityKey.R, CooldownIds.ADC_R, 25_000L);
+                cdBase.set(Role.ADC, AbilityKey.R, 25_000L);
+                this.cooldownBase = cdBase;
 
                 // Démarrer l’affichage périodique
                 hud.start();
+
+                var listener = new HotbarSpellListener(this, abilities, state,
+                                this.spellKey);
+                getServer().getPluginManager().registerEvents(listener, this);
 
                 getLogger().info("Abilities init OK.");
 
@@ -162,15 +194,23 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
 
                 // Hooks de nettoyage (désactiver passifs + nettoyer état)
                 pm.registerEvents(new Listener() {
-                        @org.bukkit.event.EventHandler
+                        @EventHandler
                         public void onQuit(PlayerQuitEvent e) {
                                 classService.disableCurrent(e.getPlayer());
                                 state.clear(e.getPlayer());
                         }
 
-                        @org.bukkit.event.EventHandler
+                        @EventHandler
                         public void onDeath(PlayerDeathEvent e) {
                                 classService.disableCurrent(e.getEntity());
+                        }
+
+                        @EventHandler
+                        public void onRespawn(PlayerRespawnEvent e) {
+                                var p = e.getPlayer();
+                                var r = state.get(p.getUniqueId()).role;
+                                getServer().getScheduler().runTaskLater(MobaPlugin.this,
+                                                () -> kitService.applyKit(p, r), 1L);
                         }
                 }, this);
 
@@ -254,4 +294,65 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
 
                 return false;
         }
+
+        private static String cdText(long ms) {
+                return ("CD: " + (ms / 1000) + "s");
+        }
+
+        public void giveClassKit(Player p, Role role) {
+                var hb = new SpellHotbar(spellKey);
+
+                // Descriptions par classe
+                Map<SpellTag, String> baseDesc = switch (role) {
+                        case TANK -> Map.of(
+                                        SpellTag.Q, "Renforce les 3 prochaines attaques",
+                                        SpellTag.W, "Obtient " + "coeurs d'absorption",
+                                        SpellTag.E, "Petit dash qui rend insensible aux contrôles de foules",
+                                        SpellTag.R, "Détermine une zone de slow massif à une certaine distance de lui",
+                                        SpellTag.PASSIVE,
+                                        "Si le tank reçoit une attaque, il applique blindness à son attaquant mais a un gros CD sur chaque ennemi");
+                        case BRUISER -> Map.of(
+                                        SpellTag.Q, "Triple dash",
+                                        SpellTag.W, "Zone de ralentissement autour du joueur",
+                                        SpellTag.E, "Dash + absorption",
+                                        SpellTag.R,
+                                        "Stéroïde de dégâts puis Smash enragé si on rappuit. En cas de réutilisation, le stéroïde disparaît",
+                                        SpellTag.PASSIVE, "Speed 3 hors combat");
+                        case ADC -> Map.of(
+                                        SpellTag.Q, "Améliore l'attack speed pendant un court lapse de temps",
+                                        SpellTag.W, "Bouclier qui supprime les dégâts de la prochaine source de dégâts",
+                                        SpellTag.E,
+                                        "Grosse zone de slow autour du joueur qui reste sur le sol pendant un court lapse de temps",
+                                        SpellTag.R, "Gros stéroïde de stats",
+                                        SpellTag.PASSIVE,
+                                        "Toutes les 5 attaques sur un joueur, la prochaine attaque applique des dégâts supplémentaires");
+                        default -> Map.of();
+                };
+
+                // Ajoute “CD: …” en lisant CooldownBase sauf pour le passif
+                var tagToKey = Map.of(
+                                SpellTag.Q, AbilityKey.Q,
+                                SpellTag.W, AbilityKey.W,
+                                SpellTag.E, AbilityKey.E,
+                                SpellTag.R, AbilityKey.R,
+                                SpellTag.PASSIVE, AbilityKey.PASSIVE);
+
+                Map<SpellTag, String> withCd = new java.util.EnumMap<>(SpellTag.class);
+                for (var e : baseDesc.entrySet()) {
+                        var tag = e.getKey();
+                        var text = e.getValue();
+
+                        var key = tagToKey.get(tag);
+                        long ms = (key == null) ? 0L : cooldownBase.get(role, key);
+                        // Si c’est le passif, on affiche juste la description sans CD
+                        String full = (tag == SpellTag.PASSIVE)
+                                        ? text
+                                        : text + " — " + cdText(ms);
+
+                        withCd.put(tag, full);
+                }
+
+                hb.applyTo(p, withCd);
+        }
+
 }

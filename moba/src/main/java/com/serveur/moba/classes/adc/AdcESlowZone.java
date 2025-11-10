@@ -30,23 +30,30 @@ public class AdcESlowZone implements Ability {
         }
 
         Location center = p.getLocation().clone();
-        long ticks = zoneMs / 50L;
+
+        final long stepTicks = 10L;
+
+        final long iterations = Math.max(1, zoneMs / (stepTicks * 50L));
+
         var task = new Object() {
-            int i = 0;
+            long i = 0;
             int id = -1;
         };
 
         task.id = ctx.plugin().getServer().getScheduler().scheduleSyncRepeatingTask(ctx.plugin(), () -> {
             task.i++;
+            // visuel
             p.getWorld().spawnParticle(org.bukkit.Particle.CLOUD, center, 8, radius / 2, 0.1, radius / 2, 0.0);
+            // slow (rafraîchi)
             for (var e : center.getWorld().getNearbyPlayers(center, radius)) {
                 if (e.equals(p))
                     continue;
-                Buffs.give(e, PotionEffectType.SLOWNESS, amp, 1); // “rafraîchi” chaque tick
+                Buffs.give(e, PotionEffectType.SLOWNESS, amp, 1); // 1s, réappliqué toutes les 0.5s
             }
-            if (task.i >= ticks)
+            if (task.i >= iterations) {
                 ctx.plugin().getServer().getScheduler().cancelTask(task.id);
-        }, 0L, 10L); // toutes les 10 ticks
+            }
+        }, 0L, stepTicks);
 
         p.sendMessage("§a[ADC] E — Zone de ralentissement déployée");
         return true;
