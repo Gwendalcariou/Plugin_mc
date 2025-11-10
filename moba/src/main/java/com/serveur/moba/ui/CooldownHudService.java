@@ -47,6 +47,10 @@ public final class CooldownHudService {
                 if (bus.isSuppressed(p))
                     continue; // ne pas écraser les messages des sorts
                 var role = state.get(p.getUniqueId()).role;
+                if (role == PlayerStateService.Role.NONE) {
+                    p.sendActionBar(Component.empty());
+                    continue;
+                }
                 String line = renderString(p, role);
                 // IMPORTANT: convertir les codes § en Component
                 var comp = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection()
@@ -58,6 +62,8 @@ public final class CooldownHudService {
 
     private String renderString(org.bukkit.entity.Player p, PlayerStateService.Role role) {
         var map = table.get(role);
+        if (map == null || map.isEmpty())
+            return "";
         String q = format(p, map.get(AbilityKey.Q), "Q");
         String w = format(p, map.get(AbilityKey.W), "W");
         String e = format(p, map.get(AbilityKey.E), "E");

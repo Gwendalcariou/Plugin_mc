@@ -14,6 +14,7 @@ import com.serveur.moba.game.GameManager;
 import com.serveur.moba.kit.KitService;
 import com.serveur.moba.kit.SpellHotbar;
 import com.serveur.moba.kit.SpellHotbar.SpellTag;
+import com.serveur.moba.listeners.ClassItemLockListener;
 import com.serveur.moba.listeners.HotbarSpellListener;
 import com.serveur.moba.listeners.PvpGuardListener;
 import com.serveur.moba.state.PlayerStateService;
@@ -191,6 +192,7 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                 pm.registerEvents(new PvpGuardListener(gameManager.lane()), this);
                 pm.registerEvents(new ProtectionListeners(globalFlags), this);
                 pm.registerEvents(new com.serveur.moba.listeners.WandListener(this), this);
+                pm.registerEvents(new ClassItemLockListener(state, kitService), this);
 
                 // Hooks de nettoyage (désactiver passifs + nettoyer état)
                 pm.registerEvents(new Listener() {
@@ -300,7 +302,7 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
         }
 
         public void giveClassKit(Player p, Role role) {
-                var hb = new SpellHotbar(spellKey);
+                var hb = new SpellHotbar(spellKey, kitService);
 
                 // Descriptions par classe
                 Map<SpellTag, String> baseDesc = switch (role) {

@@ -73,7 +73,7 @@ public final class HotbarSpellListener implements Listener {
             return;
 
         switch (e.getAction()) {
-            case RIGHT_CLICK_AIR, RIGHT_CLICK_BLOCK -> {
+            case RIGHT_CLICK_AIR, RIGHT_CLICK_BLOCK, LEFT_CLICK_AIR, LEFT_CLICK_BLOCK -> {
                 var p = e.getPlayer();
                 var item = p.getInventory().getItemInMainHand();
                 var tag = SpellHotbar.readTag(item, spellKey);

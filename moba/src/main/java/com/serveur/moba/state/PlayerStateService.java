@@ -6,11 +6,11 @@ import org.bukkit.entity.Player;
 public final class PlayerStateService {
 
     public enum Role {
-        TANK, BRUISER, ADC
+        NONE, TANK, BRUISER, ADC
     }
 
     public static class State {
-        public Role role = Role.BRUISER;
+        public Role role = Role.NONE;
         public int level = 1;
         public int xp = 0;
         public int gold = 0;

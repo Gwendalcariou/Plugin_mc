@@ -7,7 +7,7 @@ author: Gwendal Cariou
 commands:
   class:
     description: Choisir sa classe (tank, bruiser, adc)
-    usage: /class <tank|bruiser|adc>
+    usage: /class <tank|bruiser|adc|exit>
     aliases: [classe]
   forcepvp:
     description: Forcer le mode pvp d'une lane

@@ -3,9 +3,13 @@ package com.serveur.moba.classes;
 import com.serveur.moba.classes.adc.AdcPassiveListener;
 import com.serveur.moba.kit.KitService;
 import com.serveur.moba.state.PlayerStateService;
+
+import net.kyori.adventure.text.Component;
+
 import java.util.Optional;
 import java.util.Locale;
 
+import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 
 public final class ClassService {
@@ -24,6 +28,7 @@ public final class ClassService {
             case "tank" -> Optional.of(PlayerStateService.Role.TANK);
             case "bruiser" -> Optional.of(PlayerStateService.Role.BRUISER);
             case "adc" -> Optional.of(PlayerStateService.Role.ADC);
+            case "none" -> Optional.of(PlayerStateService.Role.NONE);
             default -> Optional.empty();
         };
     }
@@ -38,7 +43,7 @@ public final class ClassService {
         switch (old) {
             case BRUISER -> p.removePotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
             case ADC -> adcListener.reset(p.getUniqueId());
-            case TANK -> {
+            case TANK, NONE -> {
             }
         }
 
@@ -53,6 +58,11 @@ public final class ClassService {
             adcListener.reset(p.getUniqueId()); // démarre propre
         }
 
+        p.setGameMode(GameMode.ADVENTURE);
+        p.setFoodLevel(20);
+        p.setSaturation(20f);
+        p.setExhaustion(0f);
+
         return true;
     }
 
@@ -61,8 +71,30 @@ public final class ClassService {
         switch (state.get(p.getUniqueId()).role) {
             case BRUISER -> p.removePotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
             case ADC -> adcListener.reset(p.getUniqueId());
-            case TANK -> {
+            case TANK, NONE -> {
             }
         }
     }
+
+    public void clearClass(Player p) {
+
+        disableCurrent(p);
+
+        kitService.clearKit(p);
+
+        state.clear(p);
+
+        state.setRole(p, PlayerStateService.Role.NONE);
+
+        p.sendActionBar(Component.empty());
+
+        p.setGameMode(GameMode.SURVIVAL);
+        p.setFoodLevel(20);
+        p.setSaturation(5f);
+        p.setExhaustion(0f);
+        p.setFireTicks(0);
+        p.setFallDistance(0);
+        p.setAllowFlight(false);
+    }
+
 }

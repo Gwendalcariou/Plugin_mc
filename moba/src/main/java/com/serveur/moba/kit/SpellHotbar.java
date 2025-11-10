@@ -20,7 +20,7 @@ public final class SpellHotbar {
     }
 
     private final NamespacedKey spellKey;
-
+    private final KitService kitService;
 
     public static final Map<Integer, Map.Entry<Material, SpellTag>> SLOTS = Map.of(
             0, Map.entry(Material.FEATHER, SpellTag.Q),
@@ -32,8 +32,9 @@ public final class SpellHotbar {
     // 8 = EMERALD (pas utilisé pour l’instant)
     );
 
-    public SpellHotbar(NamespacedKey spellKey) {
+    public SpellHotbar(NamespacedKey spellKey, KitService kitService) {
         this.spellKey = spellKey;
+        this.kitService = kitService;
     }
 
     public void applyTo(Player p, Map<SpellTag, String> shortDescriptions) {
@@ -61,6 +62,7 @@ public final class SpellHotbar {
             pdc.set(spellKey, PersistentDataType.STRING, tag.name());
 
             it.setItemMeta(meta);
+            it = kitService.lock(it);
             inv.setItem(slot, it);
         }
     }

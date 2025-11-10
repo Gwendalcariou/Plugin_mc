@@ -7,7 +7,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import com.serveur.moba.game.enums.Team;
 
 import com.serveur.moba.game.GameManager;
-import com.serveur.moba.game.enums.Lane;
 import com.serveur.moba.classes.ClassService;
 
 import java.util.*;
@@ -186,9 +185,16 @@ public class MobaCommand implements CommandExecutor, TabCompleter {
         Player p = (Player) sender;
 
         if (args.length != 1) {
-            p.sendMessage("§eUsage: /class <tank|bruiser|adc>");
+            p.sendMessage("§eUsage: /class <tank|bruiser|adc|exit>");
             return;
         }
+        String sub = args[0].toLowerCase(Locale.ROOT);
+        if (sub.equals("exit")) {
+            classService.clearClass(p);
+            p.sendMessage("§aTu as quitté ta classe. Inventaire et effets réinitialisés.");
+            return;
+        }
+
         var opt = classService.parseRole(args[0]);
         if (opt.isEmpty()) {
             p.sendMessage("§cClasse inconnue (choix possibles: tank, bruiser, adc)");
@@ -205,7 +211,7 @@ public class MobaCommand implements CommandExecutor, TabCompleter {
         Player p = (Player) sender;
 
         var state = playerState.get(p.getUniqueId());
-        if (state == null) {
+        if (state == null || state.role == com.serveur.moba.state.PlayerStateService.Role.NONE) {
             p.sendMessage("§cAucune classe sélectionnée. Utilise §e/class <tank|bruiser|adc>");
             return;
         }
@@ -253,7 +259,7 @@ public class MobaCommand implements CommandExecutor, TabCompleter {
         }
         if (cmd.equals("class")) {
             if (a.length == 1)
-                return startsWith(a[0], List.of("tank", "bruiser", "adc"));
+                return startsWith(a[0], List.of("tank", "bruiser", "adc", "exit"));
             return List.of();
         }
         // q/w/e/r : pas de complétion
@@ -291,4 +297,5 @@ public class MobaCommand implements CommandExecutor, TabCompleter {
                 out.add(o);
         return out;
     }
+
 }
