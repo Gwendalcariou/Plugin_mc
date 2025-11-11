@@ -35,4 +35,8 @@ public class CooldownService {
         return remaining(p, name, ms) <= 0;
     }
 
+    public void putOnCooldown(Player p, String name, long ms) {
+        cds.put(k(p.getUniqueId(), name), System.currentTimeMillis());
+    }
+
 }

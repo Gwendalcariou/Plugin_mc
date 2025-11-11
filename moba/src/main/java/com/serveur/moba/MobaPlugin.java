@@ -121,8 +121,19 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                                 new com.serveur.moba.classes.tank.TankWAbsorb(cooldowns, 8.0, 12000L));
                 abilities.register(PlayerStateService.Role.TANK, AbilityKey.E,
                                 new com.serveur.moba.classes.tank.TankEDash(cooldowns, globalFlags, 4.0, 500L, 8000L));
-                abilities.register(PlayerStateService.Role.TANK, AbilityKey.R,
-                                new com.serveur.moba.classes.tank.TankRSlowAoE(cooldowns, 2, 3, 6.0, 20000L));
+                abilities.register(
+                                PlayerStateService.Role.TANK,
+                                AbilityKey.R,
+                                new com.serveur.moba.classes.tank.TankRSectorSlowAoE(
+                                                cooldowns,
+                                                20, // slowness amp
+                                                3, // durée en s
+                                                10.5, // rayon
+                                                110, // angle total du secteur
+                                                20_000L, // CD
+                                                16 // wind-up en ticks
+                                ));
+
                 pm.registerEvents(new com.serveur.moba.classes.tank.TankQListener(tankQ), this);
 
                 // Bruiser
