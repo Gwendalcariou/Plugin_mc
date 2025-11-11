@@ -53,7 +53,9 @@ public final class KitService {
         inv.setChestplate(lock(enchanted(new ItemStack(Material.DIAMOND_CHESTPLATE), Enchantment.PROTECTION, 1)));
         inv.setLeggings(lock(enchanted(new ItemStack(Material.DIAMOND_LEGGINGS), Enchantment.PROTECTION, 1)));
         inv.setBoots(lock(enchanted(new ItemStack(Material.DIAMOND_BOOTS), Enchantment.PROTECTION, 1)));
-        ItemStack sword = unbreakable(new ItemStack(Material.IRON_SWORD));
+        ItemStack sword = new ItemStack(Material.IRON_SWORD);
+        sword.addUnsafeEnchantment(Enchantment.SHARPNESS, 1);
+        sword = unbreakable(sword);
         inv.setItem(4, lock(sword));
         fillHotbarCommon(inv, sword);
     }
@@ -64,7 +66,9 @@ public final class KitService {
         inv.setChestplate(lock(enchanted(new ItemStack(Material.IRON_CHESTPLATE), Enchantment.PROTECTION, 2)));
         inv.setLeggings(lock(enchanted(new ItemStack(Material.IRON_LEGGINGS), Enchantment.PROTECTION, 2)));
         inv.setBoots(lock(enchanted(new ItemStack(Material.IRON_BOOTS), Enchantment.PROTECTION, 2)));
-        ItemStack sword = unbreakable(new ItemStack(Material.DIAMOND_SWORD));
+        ItemStack sword = new ItemStack(Material.DIAMOND_SWORD);
+        sword.addUnsafeEnchantment(Enchantment.SHARPNESS, 1);
+        sword = unbreakable(sword);
         inv.setItem(4, lock(sword));
         fillHotbarCommon(inv, sword);
     }
