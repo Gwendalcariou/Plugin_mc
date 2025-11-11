@@ -16,6 +16,7 @@ import com.serveur.moba.kit.SpellHotbar;
 import com.serveur.moba.kit.SpellHotbar.SpellTag;
 import com.serveur.moba.listeners.ClassItemLockListener;
 import com.serveur.moba.listeners.HotbarSpellListener;
+import com.serveur.moba.listeners.HungerGuardListener;
 import com.serveur.moba.listeners.PvpGuardListener;
 import com.serveur.moba.state.PlayerStateService;
 import com.serveur.moba.state.PlayerStateService.Role;
@@ -204,6 +205,7 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                 pm.registerEvents(new ProtectionListeners(globalFlags), this);
                 pm.registerEvents(new com.serveur.moba.listeners.WandListener(this), this);
                 pm.registerEvents(new ClassItemLockListener(state, kitService), this);
+                getServer().getPluginManager().registerEvents(new HungerGuardListener(state), this);
 
                 // Hooks de nettoyage (désactiver passifs + nettoyer état)
                 pm.registerEvents(new Listener() {

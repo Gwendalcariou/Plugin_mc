@@ -60,7 +60,7 @@ public final class ClassService {
 
         p.setGameMode(GameMode.ADVENTURE);
         p.setFoodLevel(20);
-        p.setSaturation(20f);
+        p.setSaturation(0f);
         p.setExhaustion(0f);
 
         return true;
