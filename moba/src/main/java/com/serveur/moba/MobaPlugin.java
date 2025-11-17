@@ -20,6 +20,11 @@ import com.serveur.moba.listeners.HungerGuardListener;
 import com.serveur.moba.listeners.PvpGuardListener;
 import com.serveur.moba.state.PlayerStateService;
 import com.serveur.moba.state.PlayerStateService.Role;
+import com.serveur.moba.team.ChatTeamListener;
+import com.serveur.moba.team.TeamCommand;
+import com.serveur.moba.team.TeamPvpListener;
+import com.serveur.moba.team.TeamQuitListener;
+import com.serveur.moba.team.TeamService;
 import com.serveur.moba.util.CooldownBase;
 import com.serveur.moba.util.Flags;
 import com.serveur.moba.util.ProtectionListeners;
@@ -33,6 +38,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -65,6 +71,7 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
         private KitService kitService;
         private NamespacedKey spellKey;
         private CooldownBase cooldownBase;
+        private TeamService teamService;
 
         // Zones (wand)
         private final Map<UUID, Location> pos1 = new HashMap<>();
@@ -100,10 +107,11 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                 this.actionBarBus = new ActionBarBus();
                 this.kitService = new KitService(this);
                 this.spellKey = new NamespacedKey(this, "spell_key");
+                this.teamService = new TeamService();
 
                 // === Listeners passifs globaux (role-guarded en interne) ===
                 var adcListener = new AdcPassiveListener(state);
-                var tankListener = new TankPassiveListener(6_000L, combat, this, state);
+                var tankListener = new TankPassiveListener(6_000L, globalFlags, combat, this, state, teamService);
                 var bruiserListener = new BruiserPassiveListener(combat, state, actionBarBus);
 
                 var pm = getServer().getPluginManager();
@@ -127,8 +135,8 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                                 AbilityKey.R,
                                 new com.serveur.moba.classes.tank.TankRSectorSlowAoE(
                                                 cooldowns,
-                                                20, // slowness amp
-                                                3, // durée en s
+                                                teamService, globalFlags, 20, // slowness amp
+                                                5, // durée en s
                                                 10.5, // rayon
                                                 110, // angle total du secteur
                                                 20_000L, // CD
@@ -141,7 +149,9 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                 abilities.register(PlayerStateService.Role.BRUISER, AbilityKey.Q,
                                 new com.serveur.moba.classes.bruiser.BruiserQTripleDash(cooldowns, 3.0, 6000L, 9000L));
                 abilities.register(PlayerStateService.Role.BRUISER, AbilityKey.W,
-                                new com.serveur.moba.classes.bruiser.BruiserWSlowAoE(cooldowns, 2, 3, 4.0, 10000L));
+                                new com.serveur.moba.classes.bruiser.BruiserWSlowAoE(cooldowns, teamService,
+                                                globalFlags, 2, 3, 4.0,
+                                                10000L));
                 abilities.register(PlayerStateService.Role.BRUISER, AbilityKey.E,
                                 new com.serveur.moba.classes.bruiser.BruiserEDashAbsorb(cooldowns, 6.0, 8000L));
                 abilities.register(PlayerStateService.Role.BRUISER, AbilityKey.R,
@@ -154,7 +164,9 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                 abilities.register(PlayerStateService.Role.ADC, AbilityKey.W,
                                 new com.serveur.moba.classes.adc.AdcWShield(cooldowns, globalFlags, 12000L, 2000L));
                 abilities.register(PlayerStateService.Role.ADC, AbilityKey.E,
-                                new com.serveur.moba.classes.adc.AdcESlowZone(cooldowns, 2, 6.0, 6000L, 14000L));
+                                new com.serveur.moba.classes.adc.AdcESlowZone(cooldowns, teamService, globalFlags, 2,
+                                                6.0, 6000L,
+                                                14000L));
                 abilities.register(PlayerStateService.Role.ADC, AbilityKey.R,
                                 new com.serveur.moba.classes.adc.AdcRAllSteroid(cooldowns, 25000L, 8000L, 6.0, 3.0));
 
@@ -228,6 +240,13 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                                                 () -> kitService.applyKit(p, r), 1L);
                         }
                 }, this);
+
+                // TEAM
+                getCommand("team").setExecutor(new TeamCommand(teamService));
+                getCommand("team").setTabCompleter(new TeamCommand(teamService));
+                getServer().getPluginManager().registerEvents(new TeamPvpListener(teamService), this);
+                getServer().getPluginManager().registerEvents(new TeamQuitListener(teamService), this);
+                getServer().getPluginManager().registerEvents(new ChatTeamListener(teamService), this);
 
                 // === Commandes ===
                 var mobaCmd = new com.serveur.moba.commands.MobaCommand(
@@ -368,6 +387,10 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                 }
 
                 hb.applyTo(p, withCd);
+        }
+
+        public TeamService getTeamService() {
+                return teamService;
         }
 
 }

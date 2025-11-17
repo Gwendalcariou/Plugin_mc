@@ -1,6 +1,9 @@
 package com.serveur.moba.classes.tank;
 
 import com.serveur.moba.ability.*;
+import com.serveur.moba.team.TeamService;
+import com.serveur.moba.util.Flags;
+
 import org.bukkit.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -16,10 +19,17 @@ public class TankRSectorSlowAoE implements Ability {
     private final double angleDeg; // sector total angle (e.g., 90 for a quarter pie)
     private final long cdMs;
     private final int windupTicks; // telegraph duration
+    private final TeamService teams;
+    private static final String FLAG_CC_IMMUNE = "CC_IMMUNE";
+    private final Flags flags;
 
-    public TankRSectorSlowAoE(CooldownService cds, int amp, int seconds, double radius, double angleDeg, long cdMs,
+    public TankRSectorSlowAoE(CooldownService cds, TeamService teams, Flags globalFlags, int amp, int seconds,
+            double radius,
+            double angleDeg, long cdMs,
             int windupTicks) {
         this.cds = cds;
+        this.teams = teams;
+        this.flags = globalFlags;
         this.amp = amp;
         this.seconds = seconds;
         this.radius = radius;
@@ -131,12 +141,20 @@ public class TankRSectorSlowAoE implements Ability {
     /** Applique l’effet aux joueurs dans le secteur (distance + angle) */
     private void impactSector(Player caster, Location origin, Vector forward, double radius, double halfAngleDeg) {
         origin.getWorld().getNearbyEntities(origin, radius, 2.0, radius).stream()
-                .filter(e -> e instanceof Player && !e.equals(caster))
-                .filter(e -> isInSector(origin, forward, (Entity) e, radius, halfAngleDeg))
+                .filter(e -> e instanceof Player target && !target.equals(caster))
                 .map(e -> (Player) e)
+                .filter(target -> !teams.areAllies(caster, target))
+                .filter(target -> !flags.has(target, FLAG_CC_IMMUNE))
+                .filter(target -> isInSector(origin, forward, target, radius, halfAngleDeg))
                 .forEach(target -> target.addPotionEffect(
-                        new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS, seconds * 20,
-                                amp, false, true, true)));
+                        new org.bukkit.potion.PotionEffect(
+                                org.bukkit.potion.PotionEffectType.SLOWNESS,
+                                seconds * 20,
+                                amp,
+                                false,
+                                true,
+                                true)));
+
         caster.sendMessage("§b[Tank] R — Contrôle de foule appliqué !");
     }
 

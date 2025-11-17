@@ -23,6 +23,9 @@ commands:
       /moba reload
     permission: moba.admin
     aliases: [m]
+  team:
+    description: Gérer ton équipe (red/blue/leave)
+    usage: "/team <red|blue|leave>"
 
   q: { description: Lance le sort Q }
   w: { description: Lance le sort W }
