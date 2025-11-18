@@ -97,7 +97,13 @@ public final class KitService {
         inv.setItem(2, lock(new ItemStack(Material.BLAZE_POWDER)));
         inv.setItem(3, lock(new ItemStack(Material.NETHER_STAR)));
         inv.setItem(7, lock(new ItemStack(Material.GHAST_TEAR)));
-        inv.setItem(8, lock(new ItemStack(Material.EMERALD)));
+        ItemStack emerald = new ItemStack(Material.EMERALD);
+        var meta = emerald.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§aBoutique");
+            emerald.setItemMeta(meta);
+        }
+        inv.setItem(8, lock(emerald));
         inv.setHeldItemSlot(4);
     }
 

@@ -26,6 +26,10 @@ commands:
   team:
     description: Gérer ton équipe (red/blue/leave)
     usage: "/team <red|blue|leave>"
+  boutique:
+    description: Ouvre la boutique du MOBA
+    usage: /boutique
+    aliases: [shop]
 
   q: { description: Lance le sort Q }
   w: { description: Lance le sort W }

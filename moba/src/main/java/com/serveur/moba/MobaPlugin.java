@@ -18,6 +18,9 @@ import com.serveur.moba.listeners.ClassItemLockListener;
 import com.serveur.moba.listeners.HotbarSpellListener;
 import com.serveur.moba.listeners.HungerGuardListener;
 import com.serveur.moba.listeners.PvpGuardListener;
+import com.serveur.moba.shop.ShopItemLockListener;
+import com.serveur.moba.shop.ShopListeners;
+import com.serveur.moba.shop.ShopService;
 import com.serveur.moba.state.PlayerStateService;
 import com.serveur.moba.state.PlayerStateService.Role;
 import com.serveur.moba.team.ChatTeamListener;
@@ -45,6 +48,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import com.serveur.moba.ui.ActionBarBus;
 import com.serveur.moba.ui.CooldownHudService;
+import com.serveur.moba.shop.ShopOpenListener;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -72,6 +76,7 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
         private NamespacedKey spellKey;
         private CooldownBase cooldownBase;
         private TeamService teamService;
+        private ShopService shopService;
 
         // Zones (wand)
         private final Map<UUID, Location> pos1 = new HashMap<>();
@@ -248,6 +253,22 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                 getServer().getPluginManager().registerEvents(new TeamQuitListener(teamService), this);
                 getServer().getPluginManager().registerEvents(new ChatTeamListener(teamService), this);
 
+                // SHOP
+                this.shopService = new ShopService(this);
+                var shopListeners = new ShopListeners(this, shopService);
+                // On injecte CooldownService, CooldownBase et PlayerStateService pour Navori
+                shopListeners.setCooldownDeps(this.cooldowns, this.cooldownBase, this.state);
+                pm.registerEvents(shopListeners, this);
+
+                // Emeraude -> boutique
+                pm.registerEvents(new ShopOpenListener(shopService, kitService), this);
+
+                // On lock les items du shop dans l'inventaire
+                pm.registerEvents(new ShopItemLockListener(shopService), this);
+
+                getCommand("boutique").setExecutor(this);
+                getCommand("boutique").setTabCompleter(this);
+
                 // === Commandes ===
                 var mobaCmd = new com.serveur.moba.commands.MobaCommand(
                                 this, gameManager, state, abilities, classService);
@@ -280,6 +301,14 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
         public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                         @NotNull String label, @NotNull String[] args) {
 
+                if (command.getName().equalsIgnoreCase("boutique")) {
+                        if (!(sender instanceof Player p)) {
+                                sender.sendMessage("§cCette commande est réservée aux joueurs in-game.");
+                                return true;
+                        }
+                        shopService.openShop(p);
+                        return true;
+                }
                 if (command.getName().equalsIgnoreCase("class")) {
                         if (!(sender instanceof Player p)) {
                                 sender.sendMessage("§cSeulement les joueurs in-game peuvent exécuter cette commande");

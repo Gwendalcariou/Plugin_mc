@@ -39,4 +39,24 @@ public class CooldownService {
         cds.put(k(p.getUniqueId(), name), System.currentTimeMillis());
     }
 
+    /**
+     * Reduce the remaining cooldown for (player,name) by percent of the full
+     * cooldown (ms).
+     * percent = 1.0 means 1% -> reduces by ms * 0.01 milliseconds (at least 1ms).
+     * No-op if there is no active cooldown or remaining <= 0.
+     */
+    public void reduceRemainingPercent(Player p, String name, long ms, double percent) {
+        String key = k(p.getUniqueId(), name);
+        Long last = cds.get(key);
+        if (last == null)
+            return;
+        long now = System.currentTimeMillis();
+        long elapsed = now - last;
+        long remaining = ms - elapsed;
+        if (remaining <= 0)
+            return;
+        long reduce = Math.max(1L, (long) Math.floor(ms * (percent / 100.0)));
+        long newLast = last + reduce;
+        cds.put(key, newLast);
+    }
 }
