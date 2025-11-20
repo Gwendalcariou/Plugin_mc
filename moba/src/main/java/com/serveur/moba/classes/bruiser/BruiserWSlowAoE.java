@@ -36,6 +36,11 @@ public class BruiserWSlowAoE implements Ability {
             p.sendMessage("§cW en CD.");
             return false;
         }
+
+        // ====== ANIMATION VISUELLE ======
+        spawnSoulRing(p, radius);
+
+        // ====== Effet de slow ======
         p.getNearbyEntities(radius, radius, radius).stream()
                 .filter(e -> e instanceof Player target && !target.equals(p))
                 .map(e -> (Player) e)
@@ -46,4 +51,26 @@ public class BruiserWSlowAoE implements Ability {
         p.sendMessage("§a[Bruiser] W — Slowness AOE");
         return true;
     }
+
+    /**
+     * Crée un cercle de particules SOUL autour du joueur.
+     */
+    private void spawnSoulRing(Player p, double radius) {
+        int points = 40; // plus = cercle plus propre
+        double height = 0.2;
+
+        for (int i = 0; i < points; i++) {
+            double angle = 2 * Math.PI * i / points;
+            double x = Math.cos(angle) * radius;
+            double z = Math.sin(angle) * radius;
+
+            p.getWorld().spawnParticle(
+                    org.bukkit.Particle.SOUL,
+                    p.getLocation().add(x, height, z),
+                    2,
+                    0.04, 0.02, 0.04,
+                    0);
+        }
+    }
+
 }
