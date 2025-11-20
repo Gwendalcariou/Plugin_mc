@@ -265,6 +265,14 @@ public class ShopListeners implements Listener {
                 p.sendMessage("§cTu ne possèdes pas cet objet.");
                 return;
             }
+            if (item == ShopItem.TANK_ROOKERN) {
+                UUID id = p.getUniqueId();
+
+                // On supprime l'absorption actuelle
+                Buffs.clearAbsorption(p);
+                p.setAbsorptionAmount(0.0);
+                lastDamageTaken.remove(id);
+            }
             shop.removeBoughtItem(p, item);
             p.sendMessage("§eTu revends §e" + item.display + "§e.");
         }
