@@ -28,6 +28,7 @@ import com.serveur.moba.team.TeamCommand;
 import com.serveur.moba.team.TeamPvpListener;
 import com.serveur.moba.team.TeamQuitListener;
 import com.serveur.moba.team.TeamService;
+import com.serveur.moba.util.Buffs;
 import com.serveur.moba.util.CooldownBase;
 import com.serveur.moba.util.Flags;
 import com.serveur.moba.util.ProtectionListeners;
@@ -212,6 +213,8 @@ public final class MobaPlugin extends JavaPlugin implements Listener {
                 getServer().getPluginManager().registerEvents(listener, this);
 
                 getLogger().info("Abilities init OK.");
+
+                Buffs.init(this);
 
                 // === Listeners “système” ===
                 pm.registerEvents(new PvpGuardListener(gameManager.lane()), this);

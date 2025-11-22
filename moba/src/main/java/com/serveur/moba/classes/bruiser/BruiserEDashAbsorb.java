@@ -44,7 +44,7 @@ public class BruiserEDashAbsorb implements Ability {
         spawnYellowTrail(start, end);
 
         // Buff absorption
-        Buffs.absorption(p, 4.0, 10);
+        Buffs.absorption(p, "spell_bruiser_e", 4.0, 10);
 
         p.sendMessage("§a[Bruiser] E — Dash + Absorption");
         return true;

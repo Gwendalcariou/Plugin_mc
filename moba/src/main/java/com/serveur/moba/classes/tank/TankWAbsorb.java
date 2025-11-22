@@ -31,12 +31,13 @@ public class TankWAbsorb implements Ability {
         }
 
         // Applique l'absorption
-        Buffs.absorption(p, hearts, 20);
+        Buffs.absorption(p, "spell_tank_w", hearts, 20);
 
         // Lance l'aura dorée
         startGoldAura(ctx, p);
 
         p.sendMessage("§a[Tank] W — Absorption +" + hearts + "❤");
+
         return true;
     }
 

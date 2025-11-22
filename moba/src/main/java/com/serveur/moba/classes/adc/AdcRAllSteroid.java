@@ -50,7 +50,7 @@ public class AdcRAllSteroid implements Ability {
         }
 
         // Absorption
-        Buffs.absorption(p, absorbHearts, 20);
+        Buffs.absorption(p, "spell_adc_r", absorbHearts, 20);
 
         // Strength I, Speed I, Fire Resistance
 

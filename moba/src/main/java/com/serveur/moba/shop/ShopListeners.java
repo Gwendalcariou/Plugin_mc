@@ -68,11 +68,13 @@ public class ShopListeners implements Listener {
             long diff = now - last;
 
             if (diff >= 10_000L) {
-                // Combien d'absorption il lui reste ?
-                double curAbs = p.getAbsorptionAmount(); // en HP (16.0 = 8 coeurs)
-                if (curAbs < 16.0) {
-                    // On le remonte à 8 coeurs – qu'il en ait 5, 2 ou 0
-                    Buffs.absorption(p, 8.0, 9999);
+                // Absorption actuelle en HP (2 HP = 1 cœur)
+                double curHp = p.getAbsorptionAmount();
+
+                // Rookern garantit "jusqu'à 8 cœurs" au total
+                double targetHp = 8.0 * 2.0;
+                if (curHp < targetHp) {
+                    p.setAbsorptionAmount(targetHp);
                 }
             }
         }
@@ -173,8 +175,13 @@ public class ShopListeners implements Listener {
                     long now = System.currentTimeMillis();
                     long cd = sterakCooldown.getOrDefault(id, 0L);
                     if (now - cd >= 30_000L) {
-                        Buffs.clearAbsorption(p);
-                        Buffs.absorption(p, 4.0, 5); // 4 coeurs pendant 5s
+
+                        // On enlève uniquement l'ancien Sterak s'il y en avait un
+                        Buffs.removeSource(p, "item_sterak");
+
+                        // On ajoute Sterak comme source à part
+                        Buffs.absorption(p, "item_sterak", 4.0, 5); // 4 cœurs pendant 5s
+
                         p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 5 * 20, 0));
                         sterakCooldown.put(id, now);
                     }
@@ -253,7 +260,8 @@ public class ShopListeners implements Listener {
 
             if (item == ShopItem.TANK_ROOKERN) {
                 UUID id = p.getUniqueId();
-                Buffs.absorption(p, 8.0, 9999); // 8 coeurs jaunes, durée très longue
+                Buffs.absorption(p, "item_rookern", 8.0, 0);
+
                 lastDamageTaken.put(id, System.currentTimeMillis());
 
             }
@@ -269,8 +277,7 @@ public class ShopListeners implements Listener {
                 UUID id = p.getUniqueId();
 
                 // On supprime l'absorption actuelle
-                Buffs.clearAbsorption(p);
-                p.setAbsorptionAmount(0.0);
+                Buffs.removeSource(p, "item_rookern");
                 lastDamageTaken.remove(id);
             }
             shop.removeBoughtItem(p, item);
