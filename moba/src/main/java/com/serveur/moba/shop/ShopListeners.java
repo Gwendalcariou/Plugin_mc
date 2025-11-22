@@ -251,19 +251,42 @@ public class ShopListeners implements Listener {
 
         // Clic gauche -> achat
         if (e.isLeftClick()) {
+
+            // --- restriction par classe ---
+            if (states == null) {
+                p.sendMessage("§cErreur interne : état de classe indisponible.");
+                return;
+            }
+
+            var st = states.get(p.getUniqueId());
+            if (st == null) {
+                p.sendMessage("§cTu dois choisir une classe avant d'acheter des objets.");
+                return;
+            }
+
+            if (!canBuyItem(st.role, item)) {
+                p.sendMessage("§cTu ne peux pas acheter d'objets " +
+                        switch (item.role) {
+                            case TANK -> "§9Tank§c.";
+                            case BRUISER -> "§cBruiser§c.";
+                            case ADC -> "§eADC§c.";
+                        });
+                return;
+            }
+            // --- fin restriction par classe ---
+
             if (shop.playerHas(p, item)) {
                 p.sendMessage("§cTu possèdes déjà cet objet.");
                 return;
             }
+
             shop.giveBoughtItem(p, item);
             p.sendMessage("§aTu achètes §e" + item.display + "§a.");
 
             if (item == ShopItem.TANK_ROOKERN) {
                 UUID id = p.getUniqueId();
                 Buffs.absorption(p, "item_rookern", 8.0, 0);
-
                 lastDamageTaken.put(id, System.currentTimeMillis());
-
             }
 
         }
@@ -275,8 +298,6 @@ public class ShopListeners implements Listener {
             }
             if (item == ShopItem.TANK_ROOKERN) {
                 UUID id = p.getUniqueId();
-
-                // On supprime l'absorption actuelle
                 Buffs.removeSource(p, "item_rookern");
                 lastDamageTaken.remove(id);
             }
@@ -290,6 +311,18 @@ public class ShopListeners implements Listener {
         if (shop.isShopInventory(e.getView())) {
             e.setCancelled(true);
         }
+    }
+
+    private boolean canBuyItem(PlayerStateService.Role playerRole, ShopItem item) {
+        if (playerRole == null || item == null)
+            return false;
+
+        return switch (playerRole) {
+            case TANK -> item.role == ShopItem.Role.TANK;
+            case BRUISER -> item.role == ShopItem.Role.BRUISER;
+            case ADC -> item.role == ShopItem.Role.ADC;
+            default -> false;
+        };
     }
 
 }
